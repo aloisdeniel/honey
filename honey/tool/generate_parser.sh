@@ -1,1 +1,1 @@
-antlr -o lib/src/compiler/antlr -no-listener -visitor -Dlanguage=Dart HoneyTalk.g4
+antlr4 -o lib/src/compiler/antlr -no-listener -visitor -Dlanguage=Dart HoneyTalk.g4
