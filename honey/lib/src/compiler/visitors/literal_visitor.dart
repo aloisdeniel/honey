@@ -35,28 +35,60 @@ class LiteralVisitor extends HoneyTalkBaseVisitor<ValueExpr> {
   }
 
   @override
-  ValueExpr visitLiteralString(LiteralStringContext ctx) {
-    final strRaw = ctx.STRING_LITERAL()!.text!;
-    final string = strRaw.substring(1, strRaw.length - 1);
-    return str(string);
+  ValueExpr? visitOrdinal(OrdinalContext ctx) {
+    switch (ctx.text) {
+      case 'first':
+        return val(1);
+      case 'second':
+        return val(2);
+      case 'third':
+        return val(3);
+      case 'fourth':
+        return val(4);
+      case 'fifth':
+        return val(5);
+      case 'sixth':
+        return val(6);
+      case 'seventh':
+        return val(7);
+      case 'eighth':
+        return val(8);
+      case 'ninth':
+        return val(9);
+      case 'tenth':
+        return val(10);
+      case 'last':
+        return val(-1);
+      default:
+        throw StateError(
+          'Unrecognized ordinal literal: $ctx',
+        );
+    }
   }
 
   @override
-  ValueExpr visitLiteralRegex(LiteralRegexContext ctx) {
-    final strRaw = ctx.REGEX_LITERAL()!.text!;
-    final string = strRaw.split('/');
-    return str(string[1], regexFlags: string.length == 3 ? string[2] : null);
+  ValueExpr? visitLiteralOrdinal(LiteralOrdinalContext ctx) {
+    return visitOrdinal(ctx.ordinal()!);
+  }
+
+  @override
+  ValueExpr visitLiteralString(LiteralStringContext ctx) {
+    final strRaw = ctx.STRING_LITERAL()!.text!;
+    return val(strRaw.substring(1, strRaw.length - 1));
   }
 
   @override
   ValueExpr visitLiteralNumber(LiteralNumberContext ctx) {
     final string = ctx.NUMBER_LITERAL()!.text!;
-    return str(string);
+    return val(string);
   }
 
   @override
   ValueExpr visitLiteralBool(LiteralBoolContext ctx) {
-    final string = ctx.BOOL_LITERAL()!.text!;
-    return str(string);
+    if (ctx.TRUE_LITERAL() != null) {
+      return val(true);
+    } else {
+      return val(false);
+    }
   }
 }

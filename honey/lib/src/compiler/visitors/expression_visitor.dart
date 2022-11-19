@@ -1,9 +1,10 @@
 import 'package:honey/src/compiler/antlr.dart';
 import 'package:honey/src/compiler/visitors/visitors.dart';
+import 'package:honey/src/consts/function.dart';
 import 'package:honey/src/consts/param_names.dart';
+import 'package:honey/src/consts/property.dart';
 import 'package:honey/src/expression/expr.dart';
 import 'package:honey/src/expression/function_expr.dart';
-import 'package:honey/src/expression/list_expr.dart';
 import 'package:honey/src/expression/value_expr.dart';
 
 class ExpressionVisitor extends HoneyTalkBaseVisitor<Expr> {
@@ -13,32 +14,35 @@ class ExpressionVisitor extends HoneyTalkBaseVisitor<Expr> {
   }
 
   @override
-  Expr visitExpressionExpression(ExpressionExpressionContext ctx) {
-    return ctx.expression()!.accept(this)!;
+  Expr visitExprExpr(ExprExprContext ctx) {
+    return ctx.expr()!.accept(this)!;
   }
 
   @override
-  Expr visitExpressionTerm(ExpressionTermContext ctx) {
-    return super.visitExpressionTerm(ctx)!;
+  Expr visitExprTerm(ExprTermContext ctx) {
+    return super.visitExprTerm(ctx)!;
   }
 
   @override
-  Expr visitExpressionNot(ExpressionNotContext ctx) {
-    final expression = ctx.expression()!.accept(this)!;
-    return func(F.not, {pValue: expression});
+  Expr visitExprNot(ExprNotContext ctx) {
+    final expr = ctx.expr()!.accept(this)!;
+    return func(F.not, {pValue: expr});
   }
 
   @override
-  Expr visitExpressionNegate(ExpressionNegateContext ctx) {
-    final expression = ctx.expression()!.accept(this)!;
-    return func(F.multiply, {pLeft: expression, pRight: val(-1)});
+  Expr visitExprNegate(ExprNegateContext ctx) {
+    final expr = ctx.expr()!.accept(this)!;
+    return func(F.multiply, {pLeft: expr, pRight: val(-1)});
   }
 
   @override
-  Expr visitExpressionExists(ExpressionExistsContext ctx) {
-    final target = ctx.expression()!.accept(this)!;
+  Expr visitExprExists(ExprExistsContext ctx) {
+    final target = ctx.expr()!.accept(this)!;
     final widgets = func(F.widgets, {pTarget: target});
-    final count = func(F.length, {pValue: widgets});
+    final count = func(F.property, {
+      pName: val(Property.length.name),
+      pValue: widgets,
+    });
     if (ctx.isAreNot() == null) {
       return func(F.greater, {pLeft: count, pRight: val(0)});
     } else {
@@ -47,99 +51,117 @@ class ExpressionVisitor extends HoneyTalkBaseVisitor<Expr> {
   }
 
   @override
-  Expr visitExpressionPow(ExpressionPowContext ctx) {
-    final left = ctx.expression(0)!.accept(this)!;
-    final right = ctx.expression(1)!.accept(this)!;
+  Expr visitExprPow(ExprPowContext ctx) {
+    final left = ctx.expr(0)!.accept(this)!;
+    final right = ctx.expr(1)!.accept(this)!;
     return func(F.pow, {pLeft: left, pRight: right});
   }
 
   @override
-  Expr visitExpressionBinaryOp(ExpressionBinaryOpContext ctx) {
-    final left = ctx.expression(0)!.accept(this)!;
-    final right = ctx.expression(1)!.accept(this)!;
-    switch (ctx.op?.text) {
-      case '+':
-        return func(F.plus, {pLeft: left, pRight: right});
-      case '-':
-        return func(F.minus, {pLeft: left, pRight: right});
-      case '*':
-        return func(F.multiply, {pLeft: left, pRight: right});
-      case '/':
-        return func(F.divide, {pLeft: left, pRight: right});
-      case '&':
-        return func(F.concat, {pLeft: left, pRight: right});
-      case '&&':
-        return func(F.concat, {
-          pValue: list([left, val(' '), right])
-        });
-      default:
-        throw UnsupportedError('Unknown expression op');
+  Expr visitExprBinaryOp(ExprBinaryOpContext ctx) {
+    final left = ctx.expr(0)!.accept(this)!;
+    final right = ctx.expr(1)!.accept(this)!;
+    if (ctx.plus() != null) {
+      return func(F.plus, {pLeft: left, pRight: right});
+    } else if (ctx.minus() != null) {
+      return func(F.minus, {pLeft: left, pRight: right});
+    } else if (ctx.times() != null) {
+      return func(F.multiply, {pLeft: left, pRight: right});
+    } else {
+      return func(F.divide, {pLeft: left, pRight: right});
     }
   }
 
   @override
-  Expr visitExpressionComparison(ExpressionComparisonContext ctx) {
-    final left = ctx.expression(0)!.accept(this)!;
-    final right = ctx.expression(1)!.accept(this)!;
-    switch (ctx.op!.accept(comparisonOpVisitor)) {
-      case '=':
+  Expr visitExprComparison(ExprComparisonContext ctx) {
+    final left = ctx.expr(0)!.accept(this)!;
+    final right = ctx.expr(1)!.accept(this)!;
+
+    Expr getCmp() {
+      if (ctx.eq() != null) {
         return func(F.equal, {pLeft: left, pRight: right});
-      case '!=':
+      } else if (ctx.neq() != null) {
         return func(F.not, {
           pValue: func(F.equal, {pLeft: left, pRight: right})
         });
-      case '>':
+      } else if (ctx.gt() != null) {
         return func(F.greater, {pLeft: left, pRight: right});
-      case '>=':
+      } else if (ctx.gte() != null) {
         return func(F.or, {
           pLeft: func(F.greater, {pLeft: left, pRight: right}),
           pRight: func(F.equal, {pLeft: left, pRight: right}),
         });
-      case '<':
+      } else if (ctx.lt() != null) {
         return func(F.less, {pLeft: left, pRight: right});
-      case '<=':
+      } else {
         return func(F.or, {
           pLeft: func(F.less, {pLeft: left, pRight: right}),
           pRight: func(F.equal, {pLeft: left, pRight: right}),
         });
-      default:
-        throw UnsupportedError('Unknown expression cmpOp');
+      }
+    }
+
+    final expr = getCmp();
+    if (ctx.isAreNot() != null) {
+      return func(F.not, {pValue: expr});
+    } else {
+      return expr;
     }
   }
 
   @override
-  Expr visitExpressionStartsWith(ExpressionStartsWithContext ctx) {
-    final value = ctx.expression(0)!.accept(this)!;
-    final prefix = ctx.expression(1)!.accept(this)!;
-    return func(F.startsWith, {pValue: value, pInput: prefix});
+  Expr visitExprStartsWith(ExprStartsWithContext ctx) {
+    final value = ctx.expr(0)!.accept(this)!;
+    final prefix = ctx.expr(1)!.accept(this)!;
+    final expr = func(F.startsWith, {pValue: value, pInput: prefix});
+    if (ctx.isAreNot() != null) {
+      return func(F.not, {pValue: expr});
+    } else {
+      return expr;
+    }
   }
 
   @override
-  Expr visitExpressionEndsWith(ExpressionEndsWithContext ctx) {
-    final value = ctx.expression(0)!.accept(this)!;
-    final postfix = ctx.expression(1)!.accept(this)!;
-    return func(F.endsWith, {pValue: value, pInput: postfix});
+  Expr visitExprEndsWith(ExprEndsWithContext ctx) {
+    final value = ctx.expr(0)!.accept(this)!;
+    final postfix = ctx.expr(1)!.accept(this)!;
+    final expr = func(F.endsWith, {pValue: value, pInput: postfix});
+    if (ctx.isAreNot() != null) {
+      return func(F.not, {pValue: expr});
+    } else {
+      return expr;
+    }
   }
 
   @override
-  Expr visitExpressionContains(ExpressionContainsContext ctx) {
-    final value = ctx.expression(0)!.accept(this)!;
-    final substr = ctx.expression(1)!.accept(this)!;
-    return func(F.contains, {pValue: value, pInput: substr});
+  Expr visitExprContains(ExprContainsContext ctx) {
+    final value = ctx.expr(0)!.accept(this)!;
+    final substr = ctx.expr(1)!.accept(this)!;
+    final expr = func(F.contains, {pValue: value, pInput: substr});
+    if (ctx.isAreNot() != null) {
+      return func(F.not, {pValue: expr});
+    } else {
+      return expr;
+    }
   }
 
   @override
-  Expr? visitExpressionMatches(ExpressionMatchesContext ctx) {
-    final value = ctx.expression(0)!.accept(this)!;
-    final regex = ctx.expression(1)!.accept(this)!;
-    return func(F.matches, {pValue: value, pInput: regex});
+  Expr visitExprMatches(ExprMatchesContext ctx) {
+    final value = ctx.expr(0)!.accept(this)!;
+    final regex = ctx.expr(1)!.accept(this)!;
+    final expr = func(F.matches, {pValue: value, pInput: regex});
+    if (ctx.isAreNot() != null) {
+      return func(F.not, {pValue: expr});
+    } else {
+      return expr;
+    }
   }
 
   @override
-  Expr visitExpressionIsAttr(ExpressionIsAttrContext ctx) {
-    final target = ctx.expression()!.accept(this)!;
-    final property = ctx.property()!.accept(propertyVisitor)!;
-    final result = func(F.equal, {
+  Expr visitExprIsAttr(ExprIsAttrContext ctx) {
+    final target = ctx.expr()!.accept(this)!;
+    final property = ctx.property()!.name;
+    final expr = func(F.equal, {
       pLeft: func(F.property, {
         pValue: func(F.widgets, {pTarget: target}),
         pName: val(property)
@@ -147,23 +169,23 @@ class ExpressionVisitor extends HoneyTalkBaseVisitor<Expr> {
       pRight: val(true)
     });
     if (ctx.isAreNot() != null) {
-      return func(F.not, {pValue: result});
+      return func(F.not, {pValue: expr});
     } else {
-      return result;
+      return expr;
     }
   }
 
   @override
-  Expr visitExpressionAnd(ExpressionAndContext ctx) {
-    final left = ctx.expression(0)!.accept(this)!;
-    final right = ctx.expression(1)!.accept(this)!;
+  Expr visitExprAnd(ExprAndContext ctx) {
+    final left = ctx.expr(0)!.accept(this)!;
+    final right = ctx.expr(1)!.accept(this)!;
     return func(F.and, {pLeft: left, pRight: right});
   }
 
   @override
-  Expr visitExpressionOr(ExpressionOrContext ctx) {
-    final left = ctx.expression(0)!.accept(this)!;
-    final right = ctx.expression(1)!.accept(this)!;
+  Expr visitExprOr(ExprOrContext ctx) {
+    final left = ctx.expr(0)!.accept(this)!;
+    final right = ctx.expr(1)!.accept(this)!;
     return func(F.or, {pLeft: left, pRight: right});
   }
 
@@ -186,28 +208,41 @@ class ExpressionVisitor extends HoneyTalkBaseVisitor<Expr> {
   @override
   Expr visitTermOrdinal(TermOrdinalContext ctx) {
     final target = ctx.term()!.accept(this)!;
-    var index = ctx.ordinal()!.ruleIndex + 1;
-    if (index == 11) {
-      index = -1;
-    }
-    return func(F.property, {pValue: target, pName: val(index)});
+    final ordinalValue = literalVisitor.visitOrdinal(ctx.ordinal()!);
+    return func(F.property, {pTarget: target, pValue: ordinalValue ?? val(0)});
   }
 
   @override
   Expr visitTermSymbol(TermSymbolContext ctx) {
-    final name = ctx.ID()!.text!;
+    final name = ctx.ID()?.text ?? ctx.VARIABLE()!.text!.substring(1);
     return func(F.variable, {pName: val(name)});
   }
 
   @override
   Expr visitTermProperty(TermPropertyContext ctx) {
     final target = ctx.term()!.accept(this)!;
-    final prop = ctx.property()!.accept(propertyVisitor)!;
+    final prop = ctx.property()!.name;
     return func(F.property, {pValue: target, pName: val(prop)});
   }
 
   @override
   Expr visitTermWidget(TermWidgetContext ctx) {
     return ctx.widgetTerm()!.accept(widgetVisitor)!;
+  }
+}
+
+extension on PropertyContext {
+  String get name {
+    if (length() != null) {
+      return Property.length.name;
+    } else if (character() != null) {
+      return Property.characters.name;
+    } else if (word() != null) {
+      return Property.words.name;
+    } else if (line() != null) {
+      return Property.lines.name;
+    } else {
+      return ID()!.text!;
+    }
   }
 }

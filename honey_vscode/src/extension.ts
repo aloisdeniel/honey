@@ -1,48 +1,74 @@
-import * as vs from 'vscode';
-import { HoneyDeviceManager } from './device_manager';
-import { HoneyDaemon } from './honey_daemon';
-import { HoneyDebugAdapterFactory } from './debug_session'
-import { TestDiscovery } from './test_discovery';
-import { DebugConfigProvider } from './debug_config_provider';
-import { TestRunner } from './test_runner';
+import * as vs from "vscode";
+import { HoneyDebugAdapterFactory } from "./debug_session";
+import { TestDiscovery } from "./test_discovery";
+import { DebugConfigProvider } from "./debug_config_provider";
+import { TestRunner } from "./test_runner";
+import { HoneyConnection } from "./honey_connection";
+import { getOutputChannel } from "./utils";
+import { StepDecorations } from "./step_decorations";
 
 export async function activate(context: vs.ExtensionContext) {
-  const testController = vs.tests.createTestController('honeyTestController', 'Honey');
+  const testController = vs.tests.createTestController(
+    "honeyTestController",
+    "Honey"
+  );
+  createRunProfile(testController);
   context.subscriptions.push(testController);
 
-  const testdiscovery = new TestDiscovery(testController)
-  context.subscriptions.push(testdiscovery);
+  const testDiscovery = new TestDiscovery(testController);
+  context.subscriptions.push(testDiscovery);
 
-  const daemon = new HoneyDaemon()
-  await daemon.start()
-  context.subscriptions.push(daemon);
+  const connection = new HoneyConnection();
+  context.subscriptions.push(connection);
 
-  const deviceManager = new HoneyDeviceManager(daemon);
-  const runner = new TestRunner(deviceManager, testdiscovery, testController);
-  context.subscriptions.push(daemon);
+  const runner = new TestRunner(testDiscovery, testController);
+  context.subscriptions.push(runner);
 
-  const debugProvider = new DebugConfigProvider(deviceManager, runner)
-  vs.debug.registerDebugConfigurationProvider("honey", debugProvider)
-  vs.debug.registerDebugAdapterDescriptorFactory('honey', new HoneyDebugAdapterFactory(daemon));
+  context.subscriptions.push(new StepDecorations());
 
+  const debugProvider = new DebugConfigProvider(connection, runner);
+  vs.debug.registerDebugConfigurationProvider("honey", debugProvider);
+  vs.debug.registerDebugAdapterDescriptorFactory(
+    "honey",
+    new HoneyDebugAdapterFactory(connection)
+  );
 
-  const refreshTestsCommand = vs.commands.registerCommand('honey.refreshTests', () => {
-    testdiscovery.discoverAll()
-	});
-  context.subscriptions.push(refreshTestsCommand);
+  testDiscovery.startWatching();
 
-  const selectDeviceCommand = vs.commands.registerCommand('honey.selectDevice', () => {
-		deviceManager.showDeviceSelection()
-	});
-  context.subscriptions.push(selectDeviceCommand);
+  const channel = getOutputChannel("Honey");
+  channel.appendLine("Honey extension activated");
+}
 
-  const deviceOptionsCommand = vs.commands.registerCommand('honey.toggleOverlay', () => {
-    const deviceId = deviceManager.getSelectedDevice()?.id
-    if (deviceId) {
-      daemon.sendHoneyMessage(deviceId, {type: "toggle_overlay"})
-    }
-	});
-  context.subscriptions.push(deviceOptionsCommand);
-
-  testdiscovery.startWatching()
+function createRunProfile(testController: vs.TestController) {
+  testController.createRunProfile(
+    "honey",
+    vs.TestRunProfileKind.Debug,
+    (request) => {
+      function getTestItems(items: readonly vs.TestItem[]): vs.TestItem[] {
+        return items.flatMap((item) => {
+          const children: vs.TestItem[] = [];
+          item.children.forEach((child) => {
+            children.push(child);
+          });
+          const childItems = getTestItems(children);
+          return [item, ...childItems];
+        });
+      }
+      const testItems = getTestItems(request.include ?? []);
+      const tests = testItems.flatMap((item) => {
+        if (!item.range) {
+          return item.uri!.fsPath;
+        } else {
+          return [];
+        }
+      });
+      vs.debug.startDebugging(undefined, {
+        type: "honey",
+        name: "honey",
+        request: "launch",
+        tests: tests,
+      });
+    },
+    true
+  );
 }

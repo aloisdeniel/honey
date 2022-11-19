@@ -10,9 +10,8 @@ void main() {
     test('Synonyms', () {
       final result = func(F.click, {
         pType: val(ClickType.single.name),
-        pTarget: val('myWidget'),
+        pTarget: func(F.widgets, {pTarget: val('myWidget')}),
       });
-
       expectExpr('click "myWidget"', result);
       expectExpr('clicking "myWidget"', result);
       expectExpr('tap "myWidget"', result);
@@ -32,7 +31,7 @@ void main() {
     test('Maybe', () {
       final result = func(F.click, {
         pType: val(ClickType.single.name),
-        pTarget: val('myWidget'),
+        pTarget: func(F.widgets, {pTarget: val('myWidget')}),
       });
 
       expectExpr('maybe click "myWidget"', result, optional: true);
@@ -45,7 +44,7 @@ void main() {
     test('Left', () {
       final result = func(F.click, {
         pType: val(ClickType.single.name),
-        pTarget: val('myWidget'),
+        pTarget: func(F.widgets, {pTarget: val('myWidget')}),
       });
 
       expectExpr('click "myWidget"', result);
@@ -61,7 +60,7 @@ void main() {
     test('Right', () {
       final result = func(F.click, {
         pType: val(ClickType.right.name),
-        pTarget: val('myWidget'),
+        pTarget: func(F.widgets, {pTarget: val('myWidget')}),
       });
 
       expectExpr('right click "myWidget"', result);
@@ -73,7 +72,7 @@ void main() {
     test('Double', () {
       final result = func(F.click, {
         pType: val(ClickType.double.name),
-        pTarget: val('myWidget'),
+        pTarget: func(F.widgets, {pTarget: val('myWidget')}),
       });
 
       expectExpr('double click "myWidget"', result);
@@ -85,7 +84,7 @@ void main() {
     test('Long', () {
       final result = func(F.click, {
         pType: val(ClickType.long.name),
-        pTarget: val('myWidget'),
+        pTarget: func(F.widgets, {pTarget: val('myWidget')}),
       });
 
       expectExpr('long click "myWidget"', result);
@@ -97,7 +96,7 @@ void main() {
     test('Widget Offset', () {
       final result = func(F.click, {
         pType: val(ClickType.single.name),
-        pTarget: val('myWidget'),
+        pTarget: func(F.widgets, {pTarget: val('myWidget')}),
         pOffset: val('0.5,0.5'),
       });
 

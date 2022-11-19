@@ -1,7 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:honey/honey.dart';
 import 'package:honey/src/compiler/compile.dart';
-import 'package:honey/src/expression/expr.dart';
 import 'package:honey/src/expression/statement.dart';
+import 'package:honey/src/runner/context/runtime_honey_context.dart';
 
 void expectExpr(String test, Expr expression, {bool optional = false}) {
   final result = compileHoneyTalk(test);
@@ -15,16 +16,40 @@ void expectExpr(String test, Expr expression, {bool optional = false}) {
   expect(statement.expression, expression);
 }
 
-void expectCondition(String test, ConditionStatement item) {
+void expectStatement(String test, Statement statement) {
   final result = compileHoneyTalk(test);
   expect(result.hasError, false);
-  final statements = result.statements;
-  expect(statements, isNotNull);
-  expect(statements!.length, item.conditionStatements?.length ?? 0);
-  for (final statement in statements) {
-    statement as ConditionStatement;
-    expect(statement.source, test);
-    expect(statement.line, 0);
-    expect(statement.conditionStatements, item.conditionStatements);
-  }
+  expect(result.statements!.first, statement);
+}
+
+void expectEmpty(String test) {
+  final result = compileHoneyTalk(test);
+  expect(result.hasError, false);
+  expect(result.statements!.length, 0);
+}
+
+void expectError(
+  String test, {
+  required int errorLine,
+  required int errorColumn,
+}) {
+  final result = compileHoneyTalk(test);
+  expect(result.hasError, true);
+  expect(result.errorLine, errorLine);
+  expect(result.errorColumn, errorColumn);
+}
+
+void expectNoError(String test) {
+  final result = compileHoneyTalk(test);
+  expect(result.hasError, false);
+}
+
+Future<void> expectEval(
+  Expr actual,
+  EvaluatedExpr expected, {
+  HoneyContext? context,
+}) async {
+  final ctx = context ?? RuntimeHoneyContext(customFunctions: {});
+  final result = await ctx.eval(actual);
+  expect(result, expected);
 }
