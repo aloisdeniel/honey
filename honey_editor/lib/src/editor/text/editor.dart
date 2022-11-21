@@ -30,7 +30,7 @@ class HoneyTalkTextEditor extends StatelessWidget {
       expands: true,
       scrollPadding: EdgeInsets.zero,
       decoration: InputDecoration(
-        contentPadding: theme.editor.padding.copyWith(left: 0),
+        contentPadding: theme.editor.padding.copyWith(left: 50),
         isDense: true,
       ),
     );

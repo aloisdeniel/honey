@@ -4,6 +4,7 @@ import 'package:flutter/widgets.dart';
 import 'package:honey/src/compiler/antlr.dart';
 import 'package:honey/src/compiler/compile.dart';
 import 'package:antlr4/antlr4.dart';
+import 'package:honey_editor/src/helpers/line_counter.dart';
 
 import '../theme/theme.dart';
 
@@ -13,6 +14,19 @@ class HoneyTalkEditorController extends TextEditingController {
   });
 
   CompilationResult? compilation;
+
+  int get numberOfLines {
+    return const LineCounter().count(value.text);
+  }
+
+  int get selectedLine {
+    return selection.baseOffset < 0
+        ? 0
+        : const LineCounter().count(
+            text,
+            selection.baseOffset,
+          );
+  }
 
   @override
   set value(TextEditingValue newValue) {

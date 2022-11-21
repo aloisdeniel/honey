@@ -1,9 +1,6 @@
-import 'dart:convert';
-
 // ignore: implementation_imports
 import 'package:honey/src/compiler/antlr.dart';
 import 'package:flutter/widgets.dart';
-import 'package:honey_editor/src/helpers/line_counter.dart';
 import 'package:honey_editor/src/theme/theme.dart';
 
 import 'editor.dart';
@@ -29,28 +26,26 @@ class Gutter extends StatelessWidget {
     return AnimatedBuilder(
       animation: editorController,
       builder: (contex, _) {
-        final numberOfLines = const LineCounter().count(editorController.text);
-        final selectedLine = editorController.selection.baseOffset < 0
-            ? 0
-            : const LineCounter().count(
-                editorController.text,
-                editorController.selection.baseOffset,
-              );
-        return SizedBox(
-          width: 40,
-          child: ScrollConfiguration(
-            behavior:
-                ScrollConfiguration.of(context).copyWith(scrollbars: false),
-            child: ListView.builder(
-              controller: scrollController,
-              padding: theme.editor.padding,
-              itemCount: numberOfLines,
-              itemBuilder: (BuildContext context, int index) {
-                final hasError =
-                    editorController.compilation?.errorLine == index;
-                final isSelectedLine = index == selectedLine - 1;
-                return SizedBox(
+        final numberOfLines = editorController.numberOfLines;
+        final selectedLine = editorController.selectedLine;
+        return ScrollConfiguration(
+          behavior: ScrollConfiguration.of(context).copyWith(scrollbars: false),
+          child: ListView.builder(
+            controller: scrollController,
+            padding: EdgeInsets.zero,
+            itemCount: numberOfLines,
+            itemBuilder: (BuildContext context, int index) {
+              final hasError = index == editorController.compilation?.errorLine;
+              final isSelectedLine = index == selectedLine - 1;
+              return Container(
+                decoration: BoxDecoration(
+                  color: const Color(0xFF000000)
+                      .withAlpha(isSelectedLine ? 10 : 0),
+                ),
+                alignment: Alignment.centerLeft,
+                child: SizedBox(
                   height: lineHeight,
+                  width: 40,
                   child: Text(
                     (index + 1).toString(),
                     style: theme.editor
@@ -64,9 +59,9 @@ class Gutter extends StatelessWidget {
                         ),
                     textAlign: TextAlign.end,
                   ),
-                );
-              },
-            ),
+                ),
+              );
+            },
           ),
         );
       },

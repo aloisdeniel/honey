@@ -31,14 +31,15 @@ class _HoneyEditorState extends State<HoneyEditor> {
   @override
   Widget build(BuildContext context) {
     return Material(
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+      child: Stack(
         children: [
-          Gutter(
-            scrollController: gutterScrollController,
-            editorController: editorController,
+          Positioned.fill(
+            child: Gutter(
+              scrollController: gutterScrollController,
+              editorController: editorController,
+            ),
           ),
-          Expanded(
+          Positioned.fill(
             child: HoneyTalkTextEditor(
               scrollController: textScrollController,
               editorController: editorController,
